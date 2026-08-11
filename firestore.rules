@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Solo Diego, Jessi y Bachi (las 3 cuentas que se crean solas la
+    // primera vez que cada uno entra con su PIN) pueden leer y escribir.
+    // Nadie más, aunque conozca la configuración pública de Firebase,
+    // puede acceder a los datos sin autenticarse.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

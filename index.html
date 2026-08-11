@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gastos Compartidos Cacas — Diego, Jessi &amp; Bachi</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ===================== PANTALLA DE LOGIN ===================== -->
+<div id="login-screen" class="screen">
+  <div class="login-card">
+    <h1>💰 Gastos Compartidos Cacas</h1>
+    <p class="subtitle">Elegí quién sos para continuar</p>
+
+    <div id="login-step-name" class="login-step">
+      <div class="user-grid">
+        <button class="user-btn" data-user="Diego"><span class="avatar">D</span>Diego</button>
+        <button class="user-btn" data-user="Jessi"><span class="avatar">J</span>Jessi</button>
+        <button class="user-btn" data-user="Bachi"><span class="avatar">B</span>Bachi</button>
+      </div>
+    </div>
+
+    <div id="login-step-pin" class="login-step hidden">
+      <p class="pin-label">Hola <strong id="pin-username"></strong>, ingresá tu PIN (6 dígitos)</p>
+      <input type="password" id="pin-input" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off">
+      <p id="pin-hint" class="hint"></p>
+      <div id="login-error" class="error-msg hidden"></div>
+      <div class="login-actions">
+        <button id="pin-back" class="btn-secondary">← Volver</button>
+        <button id="pin-submit" class="btn-primary">Ingresar</button>
+      </div>
+      <p id="pin-firsttime-note" class="hint hidden">Es la primera vez que entrás: este PIN va a quedar configurado para vos.</p>
+    </div>
+
+    <div id="login-loading" class="hint hidden">Conectando...</div>
+  </div>
+</div>
+
+<!-- ===================== APP PRINCIPAL ===================== -->
+<div id="app-screen" class="screen hidden">
+  <header class="topbar">
+    <div class="topbar-title">
+      <h1>💰 Gastos Compartidos Cacas</h1>
+      <span id="last-change-label" class="last-change"></span>
+    </div>
+    <div class="topbar-user">
+      <span id="current-user-label"></span>
+      <button id="logout-btn" class="btn-link">Salir</button>
+    </div>
+  </header>
+
+  <div class="month-bar">
+    <label for="month-select-mes">Mes:</label>
+    <select id="month-select-mes"></select>
+    <label for="month-select-anio">Año:</label>
+    <select id="month-select-anio"></select>
+    <button id="next-month-btn" class="btn-secondary" title="Crea el próximo mes y arrastra las cuotas pendientes">+ Generar mes siguiente</button>
+    <button id="delete-month-btn" class="btn-danger" title="Elimina el mes actual y todos sus gastos">🗑 Borrar mes</button>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="gastos">Gastos</button>
+    <button class="tab-btn" data-tab="auditoria">Auditoría</button>
+  </nav>
+
+  <main>
+    <!-- TAB: GASTOS -->
+    <section id="tab-gastos" class="tab-panel active">
+      <div class="panel-header">
+        <h2 id="gastos-month-title">—</h2>
+        <div class="panel-header-actions">
+          <button id="generate-report-btn" class="btn-secondary">📊 Generar informe</button>
+          <button id="add-item-btn" class="btn-primary">+ Agregar gasto</button>
+        </div>
+      </div>
+      <div class="table-toolbar">
+        <input type="search" id="items-search" placeholder="🔍 Buscar ítem...">
+      </div>
+      <div class="table-wrap">
+        <table id="items-table">
+          <thead>
+            <tr>
+              <th data-sort="nombre">Ítem <span class="sort-ind"></span></th>
+              <th data-sort="montoTotal">Monto total <span class="sort-ind"></span></th>
+              <th data-sort="cuotaActual">Cuotas <span class="sort-ind"></span></th>
+              <th data-sort="montoCuota">Cuota del mes <span class="sort-ind"></span></th>
+              <th data-sort="tarjeta">Tarjeta usada <span class="sort-ind"></span></th>
+              <th data-sort="participantes">Participantes <span class="sort-ind"></span></th>
+              <th>Deudas del mes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="items-tbody"></tbody>
+        </table>
+        <p id="items-empty" class="hint hidden">Todavía no hay gastos cargados en este mes.</p>
+      </div>
+    </section>
+
+    <!-- TAB: AUDITORÍA -->
+    <section id="tab-auditoria" class="tab-panel">
+      <div class="panel-header">
+        <h2>Tira auditora</h2>
+        <label class="audit-filter-label">
+          <input type="checkbox" id="audit-only-month"> solo este mes
+        </label>
+      </div>
+      <div id="audit-log"></div>
+    </section>
+  </main>
+</div>
+
+<!-- ===================== MODAL: INFORME ===================== -->
+<div id="report-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Informe de <span id="report-modal-month"></span></h3>
+    <div id="report-content"></div>
+    <div class="modal-actions">
+      <button id="report-download-pdf-btn" class="btn-secondary hidden">⬇ Descargar PDF</button>
+      <button id="report-close-btn" class="btn-primary">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: AGREGAR/EDITAR GASTO ===================== -->
+<div id="item-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="item-modal-title">Agregar gasto</h3>
+    <form id="item-form">
+      <label>Ítem
+        <input type="text" id="f-nombre" required placeholder="Ej: Supermercado, Alquiler, Regalo...">
+      </label>
+
+      <div class="form-row">
+        <label>Monto total ($)
+          <input type="number" id="f-monto" required min="0" step="0.01">
+        </label>
+        <label>Cantidad de cuotas
+          <input type="number" id="f-cuotas" required min="1" step="1" value="1">
+        </label>
+      </div>
+
+      <label>¿Quién usó la tarjeta para esta compra?
+        <select id="f-tarjeta" required>
+          <option value="Diego">Diego</option>
+          <option value="Jessi">Jessi</option>
+          <option value="Bachi">Bachi</option>
+        </select>
+      </label>
+
+      <fieldset>
+        <legend>¿Entre quiénes se reparte este gasto?</legend>
+        <p class="hint">Tildá a todas las personas que deben una parte (incluí a quien pagó si también le corresponde su propia parte). Si el gasto es 100% de otra persona, tildá solo a esa persona.</p>
+        <div class="checkbox-row">
+          <label><input type="checkbox" class="f-participante" value="Diego" checked> Diego</label>
+          <label><input type="checkbox" class="f-participante" value="Jessi" checked> Jessi</label>
+          <label><input type="checkbox" class="f-participante" value="Bachi" checked> Bachi</label>
+        </div>
+      </fieldset>
+
+      <label class="modo-toggle">
+        <input type="checkbox" id="f-modo-manual"> Ajustar montos manualmente (en vez de repartir en partes iguales)
+      </label>
+
+      <div id="f-manual-wrap" class="hidden"></div>
+
+      <div id="f-preview" class="preview-box"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="item-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MODAL: CONFIRMAR BORRADO ===================== -->
+<div id="confirm-modal" class="modal-overlay hidden">
+  <div class="modal modal-small">
+    <h3 id="confirm-title">¿Eliminar este gasto?</h3>
+    <p id="confirm-text" class="hint"></p>
+    <div class="modal-actions">
+      <button id="confirm-cancel-btn" class="btn-secondary">Cancelar</button>
+      <button id="confirm-delete-btn" class="btn-danger">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<footer id="footer-bar" class="footer-bar">En memoria de "el Excel" 🕯️</footer>
+
+<script type="module" src="js/firebase-config.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
