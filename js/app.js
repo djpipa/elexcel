@@ -82,6 +82,8 @@ DB.alCambiarSesion(async (user) => {
     loginScreen.classList.add("hidden");
     appScreen.classList.remove("hidden");
     el("current-user-label").textContent = `👋 ${currentUser}`;
+    aplicarAvatar(currentUser, null);
+    DB.obtenerAvatar(currentUser).then(url => aplicarAvatar(currentUser, url));
     await arrancarApp();
   } else {
     currentUser = null;
@@ -98,15 +100,94 @@ function nombreDePorEmail(email) {
 }
 
 // ============================================================
+// AVATAR DE USUARIO (menú contextual en la barra superior)
+// ============================================================
+const userMenu = el("user-menu");
+
+function aplicarAvatar(nombre, dataUrl) {
+  const mini = el("current-user-avatar");
+  if (dataUrl) {
+    mini.innerHTML = `<img src="${dataUrl}" alt="${nombre}">`;
+  } else {
+    mini.textContent = (nombre || "?").charAt(0).toUpperCase();
+  }
+}
+
+el("user-menu-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  userMenu.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+  if (userMenu.classList.contains("hidden")) return;
+  if (userMenu.contains(e.target) || el("user-menu-btn").contains(e.target)) return;
+  userMenu.classList.add("hidden");
+});
+
+el("change-avatar-btn").addEventListener("click", () => {
+  userMenu.classList.add("hidden");
+  el("avatar-file-input").click();
+});
+
+el("avatar-file-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    mostrarToast("Elegí un archivo de imagen.");
+    return;
+  }
+  try {
+    const dataUrl = await redimensionarImagen(file);
+    await DB.guardarAvatar(currentUser, dataUrl);
+    aplicarAvatar(currentUser, dataUrl);
+    mostrarToast("Avatar actualizado.");
+  } catch (err) {
+    mostrarToast("No se pudo procesar esa imagen.");
+  }
+});
+
+/** Recorta la imagen a un cuadrado centrado y la reduce a `tam` px, devuelta como data URL JPEG. */
+function redimensionarImagen(file, tam = 160) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = tam;
+        canvas.height = tam;
+        const ctx = canvas.getContext("2d");
+        const lado = Math.min(img.width, img.height);
+        const sx = (img.width - lado) / 2;
+        const sy = (img.height - lado) / 2;
+        ctx.drawImage(img, sx, sy, lado, lado, 0, 0, tam, tam);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ============================================================
 // ARRANQUE: cargar meses (y sembrar datos históricos si hace falta)
 // ============================================================
+function idMesActual() {
+  const hoy = new Date();
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+}
+
 async function arrancarApp() {
   meses = await DB.listarMeses();
   if (meses.length === 0) {
     await sembrarDatosIniciales();
     meses = await DB.listarMeses();
   }
-  currentMonthId = meses[meses.length - 1].id;
+  const idHoy = idMesActual();
+  currentMonthId = meses.some(m => m.id === idHoy) ? idHoy : meses[meses.length - 1].id;
   sincronizarSelectoresMes();
   await refrescarTodo();
   await actualizarUltimoCambioLabel();
@@ -128,10 +209,15 @@ async function sembrarDatosIniciales() {
   });
 }
 
+const ANIO_MAX_SELECTOR = 2030;
+
 function renderSelectorAnios() {
   const selAnio = el("month-select-anio");
   const anioActual = selAnio.value;
-  const anios = [...new Set(meses.map(m => m.id.split("-")[0]))].sort();
+  const aniosConMeses = meses.map(m => Number(m.id.split("-")[0]));
+  const anioMin = aniosConMeses.length ? Math.min(...aniosConMeses) : new Date().getFullYear();
+  const anios = [];
+  for (let a = anioMin; a <= ANIO_MAX_SELECTOR; a++) anios.push(String(a));
   selAnio.innerHTML = anios.map(a => `<option value="${a}">${a}</option>`).join("");
   if (anios.includes(anioActual)) selAnio.value = anioActual;
 }
@@ -139,6 +225,10 @@ function renderSelectorAnios() {
 function renderSelectorMesesParaAnio(anio) {
   const selMes = el("month-select-mes");
   const mesesDelAnio = meses.filter(m => m.id.startsWith(`${anio}-`));
+  if (mesesDelAnio.length === 0) {
+    selMes.innerHTML = `<option value="">— sin meses generados —</option>`;
+    return;
+  }
   selMes.innerHTML = mesesDelAnio.map(m => {
     const numMes = Number(m.id.split("-")[1]);
     return `<option value="${m.id}">${m.label || NOMBRES_MESES[numMes - 1]}</option>`;
@@ -155,16 +245,33 @@ function sincronizarSelectoresMes() {
 
 el("month-select-anio").addEventListener("change", async (e) => {
   renderSelectorMesesParaAnio(e.target.value);
-  currentMonthId = el("month-select-mes").value;
+  const nuevoMes = el("month-select-mes").value;
+  if (!nuevoMes) {
+    mostrarToast(`Todavía no hay meses generados para ${e.target.value}.`);
+    return;
+  }
+  currentMonthId = nuevoMes;
   await refrescarTodo();
 });
 
 el("month-select-mes").addEventListener("change", async (e) => {
+  if (!e.target.value) return;
   currentMonthId = e.target.value;
   await refrescarTodo();
 });
 
 el("next-month-btn").addEventListener("click", generarMesSiguiente);
+
+el("app-title").addEventListener("click", async () => {
+  const idHoy = idMesActual();
+  currentMonthId = meses.some(m => m.id === idHoy) ? idHoy : meses[meses.length - 1].id;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  document.querySelector('.tab-btn[data-tab="gastos"]').classList.add("active");
+  el("tab-gastos").classList.add("active");
+  sincronizarSelectoresMes();
+  await refrescarTodo();
+});
 
 el("delete-month-btn").addEventListener("click", abrirConfirmBorradoMes);
 
@@ -331,13 +438,13 @@ function renderTablaItems() {
     }).join("") || `<span class="debt-line hint">Sin deuda (todo cubierto por quien pagó)</span>`;
 
     tr.innerHTML = `
-      <td class="wrap"><strong>${escapeHtml(item.nombre)}</strong></td>
-      <td>${formatoMoneda(item.montoTotal)}</td>
-      <td>${item.cuotaActual} de ${item.cuotasTotal}</td>
-      <td>${formatoMoneda(item.montoCuota ?? montoCuota(item.montoTotal, item.cuotasTotal))}</td>
-      <td><span class="badge badge-${item.tarjeta}">${item.tarjeta}</span></td>
-      <td class="wrap">${(item.participantes || []).join(", ")}</td>
-      <td class="wrap">${deudasHtml}</td>
+      <td class="wrap" data-label="Ítem"><strong>${escapeHtml(item.nombre)}</strong></td>
+      <td data-label="Monto total">${formatoMoneda(item.montoTotal)}</td>
+      <td data-label="Cuotas">${item.cuotaActual} de ${item.cuotasTotal}</td>
+      <td data-label="Cuota del mes">${formatoMoneda(item.montoCuota ?? montoCuota(item.montoTotal, item.cuotasTotal))}</td>
+      <td data-label="Tarjeta usada"><span class="badge badge-${item.tarjeta}">${item.tarjeta}</span></td>
+      <td class="wrap" data-label="Participantes">${(item.participantes || []).join(", ")}</td>
+      <td class="wrap" data-label="Deudas del mes">${deudasHtml}</td>
       <td>
         <div class="row-actions">
           <button class="btn-secondary btn-small" data-action="editar" data-id="${item.id}">Editar</button>
@@ -652,6 +759,15 @@ async function generarInforme() {
   mostrarToast("Informe generado.");
 }
 
+// Un saldo queda "moroso" si al llegar el día 3 del mes siguiente al
+// informado todavía no se marcó como pagado.
+function esMoroso(monthId, liquidado) {
+  if (liquidado) return false;
+  const [y, m] = monthId.split("-").map(Number);
+  const limite = new Date(y, m, 3, 0, 0, 0, 0); // mes es 1-indexado -> ya cae en el mes siguiente
+  return new Date() >= limite;
+}
+
 function renderInforme(netos, pagos) {
   const cont = el("report-content");
   if (netos.length === 0) {
@@ -663,10 +779,11 @@ function renderInforme(netos, pagos) {
   for (const n of netos) {
     const key = `${n.de}->${n.a}`;
     const liquidado = pagos?.[key]?.liquidado;
+    const moroso = esMoroso(ultimoInforme.monthId, liquidado);
     const row = document.createElement("div");
-    row.className = "report-total";
+    row.className = "report-total" + (moroso ? " moroso" : "");
     row.innerHTML = `
-      <span>${n.de} le paga a ${n.a}</span>
+      <span>${n.de} le paga a ${n.a}${moroso ? ' <span class="moroso-tag">MOROSO</span>' : ""}</span>
       <span class="report-amount">${formatoMoneda(n.monto)}</span>
       <button class="btn-secondary btn-small" data-key="${key}">
         ${liquidado ? '<span class="settled-tag">✓ Pagado</span>' : "Marcar como pagado"}
@@ -709,7 +826,9 @@ async function descargarInformePDF() {
     for (const n of ultimoInforme.netos) {
       const key = `${n.de}->${n.a}`;
       const liquidado = ultimoInforme.pagos?.[key]?.liquidado;
-      pdf.text(`${n.de} le paga a ${n.a}: ${formatoMoneda(n.monto)}${liquidado ? " (Pagado)" : ""}`, 14, y);
+      const moroso = esMoroso(ultimoInforme.monthId, liquidado);
+      const estado = liquidado ? " (Pagado)" : moroso ? " (MOROSO)" : "";
+      pdf.text(`${n.de} le paga a ${n.a}: ${formatoMoneda(n.monto)}${estado}`, 14, y);
       y += 8;
     }
   }

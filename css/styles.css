@@ -141,9 +141,38 @@ p { margin: 0; }
 }
 .topbar h1 { font-size: 19px; }
 .topbar-title { display: flex; flex-direction: column; gap: 3px; }
+#app-title { cursor: pointer; }
+#app-title:hover { color: var(--primary-dark); }
 .last-change { font-size: 11px; color: var(--ink-soft); font-weight: 500; }
 .topbar-user { display: flex; align-items: center; gap: 12px; font-size: 14px; }
 #current-user-label { font-weight: 600; }
+
+.user-menu-wrap { position: relative; }
+.user-menu-trigger {
+  display: flex; align-items: center; gap: 8px;
+  background: none; border: none; cursor: pointer;
+  font: inherit; color: var(--ink); font-weight: 600;
+  padding: 4px 8px 4px 4px; border-radius: 999px;
+}
+.user-menu-trigger:hover { background: var(--bg); }
+.mini-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--primary); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; overflow: hidden; flex-shrink: 0;
+}
+.mini-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.user-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--card); border: 1.5px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow); min-width: 180px; z-index: 60; overflow: hidden;
+}
+.user-menu-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; padding: 11px 14px;
+  font-size: 13.5px; font-weight: 600; color: var(--ink); cursor: pointer;
+}
+.user-menu-item:hover { background: var(--row-hover); }
 
 .month-bar {
   display: flex;
@@ -317,6 +346,22 @@ legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
 .report-amount { font-weight: 700; font-size: 17px; color: var(--primary-dark); }
 .settled-tag { color: var(--accent); font-weight: 700; }
 
+.report-total.moroso { background: var(--danger-bg); border-radius: 8px; padding-left: 10px; padding-right: 10px; }
+.report-total.moroso > span:first-child { color: var(--danger); font-weight: 700; }
+.report-total.moroso .report-amount { color: var(--danger); }
+.moroso-tag {
+  display: inline-block;
+  background: var(--danger);
+  color: white;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
 /* ---------- AUDIT ---------- */
 .audit-filter-label { font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
 .audit-entry {
@@ -367,6 +412,41 @@ legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
   .form-row { flex-direction: column; }
   .modal { padding: 20px 18px; }
   .report-total { font-size: 14px; }
+
+  /* Tabla de gastos: en vez de una tabla ancha con scroll lateral, cada
+     fila se convierte en una tarjeta con los datos apilados. Se muestra
+     la misma información que en escritorio, solo que en otro layout. */
+  .table-wrap { background: transparent; box-shadow: none; overflow-x: visible; border-radius: 0; }
+  #items-table, #items-table tbody { display: block; width: 100%; }
+  #items-table thead { display: none; }
+  #items-table tr {
+    display: block;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 4px 14px;
+    margin-bottom: 12px;
+    border-top: none;
+  }
+  #items-table td {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: normal;
+    padding: 8px 0;
+    border: none;
+  }
+  #items-table td:not(:last-child) { border-bottom: 1px dashed var(--border); }
+  #items-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+  }
+  #items-table td:last-child { flex-direction: row; justify-content: flex-end; padding-top: 10px; }
+  #items-table td:last-child::before { display: none; }
 }
 
 @media (max-width: 420px) {

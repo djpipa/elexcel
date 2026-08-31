@@ -42,14 +42,23 @@
 <div id="app-screen" class="screen hidden">
   <header class="topbar">
     <div class="topbar-title">
-      <h1>💰 Gastos Compartidos Cacas</h1>
+      <h1 id="app-title" title="Ir al mes vigente">💰 Gastos Compartidos Cacas</h1>
       <span id="last-change-label" class="last-change"></span>
     </div>
     <div class="topbar-user">
-      <span id="current-user-label"></span>
+      <div class="user-menu-wrap">
+        <button id="user-menu-btn" class="user-menu-trigger" type="button">
+          <span id="current-user-avatar" class="mini-avatar">?</span>
+          <span id="current-user-label"></span>
+        </button>
+        <div id="user-menu" class="user-menu hidden">
+          <button id="change-avatar-btn" class="user-menu-item" type="button">🖼️ Cambiar avatar</button>
+        </div>
+      </div>
       <button id="logout-btn" class="btn-link">Salir</button>
     </div>
   </header>
+  <input type="file" id="avatar-file-input" accept="image/*" class="hidden">
 
   <div class="month-bar">
     <label for="month-select-mes">Mes:</label>

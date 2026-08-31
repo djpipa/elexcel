@@ -173,6 +173,16 @@ export async function obtenerPagos(monthId) {
   return snap.exists() ? snap.data() : {};
 }
 
+// ---------------- AVATAR DE USUARIO ----------------
+export async function guardarAvatar(nombre, dataUrl) {
+  await setDoc(doc(dbase, "avatars", nombre), { dataUrl, actualizadoEn: serverTimestamp() });
+}
+
+export async function obtenerAvatar(nombre) {
+  const snap = await getDoc(doc(dbase, "avatars", nombre));
+  return snap.exists() ? snap.data().dataUrl : null;
+}
+
 // ---------------- ÚLTIMO CAMBIO GLOBAL ----------------
 export async function registrarUltimoCambio() {
   await setDoc(doc(dbase, "meta", "ultimoCambio"), { ts: serverTimestamp() });
