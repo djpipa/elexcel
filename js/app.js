@@ -508,12 +508,25 @@ el("item-form").addEventListener("submit", async (e) => {
     mostrarToast("Gasto actualizado.");
   } else {
     data.creadoPor = currentUser;
-    await DB.crearItem(currentMonthId, data);
+    const nuevoId = await DB.crearItem(currentMonthId, data);
     await DB.registrarAuditoria({
       usuario: currentUser, accion: "crear_item", monthId: currentMonthId,
       detalle: `Agregó "${nombre}" (${formatoMoneda(montoTotal)}, ${cuotasTotal} cuotas, tarjeta: ${tarjeta}).`
     });
-    mostrarToast("Gasto agregado.");
+
+    const propagados = await propagarCuotasFuturas({
+      origenId: nuevoId, nombre, montoTotal, cuotasTotal, tarjeta, participantes, modo, deudas
+    });
+    if (propagados > 0) {
+      await DB.registrarAuditoria({
+        usuario: currentUser, accion: "propagar_cuotas", monthId: currentMonthId,
+        detalle: `Propagó "${nombre}" a ${propagados} mes(es) siguientes ya creados.`
+      });
+    }
+
+    mostrarToast(propagados > 0
+      ? `Gasto agregado (y propagado a ${propagados} mes(es) siguientes).`
+      : "Gasto agregado.");
   }
 
   await DB.registrarUltimoCambio();
@@ -521,6 +534,38 @@ el("item-form").addEventListener("submit", async (e) => {
   await refrescarTodo();
   await actualizarUltimoCambioLabel();
 });
+
+// Cuando se carga un gasto nuevo con varias cuotas, hay que reflejar las
+// cuotas 2, 3, ... en los meses que ya existen después del actual (por
+// ejemplo si el gasto se carga en Agosto pero Septiembre y Octubre ya
+// estaban generados). Antes esto solo pasaba al generar el mes siguiente,
+// así que un gasto cargado retroactivamente nunca llegaba a esos meses.
+async function propagarCuotasFuturas({ origenId, nombre, montoTotal, cuotasTotal, tarjeta, participantes, modo, deudas }) {
+  if (cuotasTotal <= 1) return 0;
+  const siguientes = meses
+    .filter(m => m.id > currentMonthId)
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  let cuotaActual = 1;
+  let propagados = 0;
+  for (const mes of siguientes) {
+    if (cuotaActual >= cuotasTotal) break;
+    cuotaActual++;
+    const deudasMes = modo === "manual"
+      ? deudas
+      : calcularDeudasAuto(tarjeta, participantes, montoTotal, cuotasTotal);
+    await DB.crearItem(mes.id, {
+      nombre, montoTotal, cuotasTotal, cuotaActual,
+      montoCuota: montoCuota(montoTotal, cuotasTotal),
+      tarjeta, participantes, modo, deudas: deudasMes,
+      origenId,
+      creadoPor: currentUser,
+      editadoPor: currentUser
+    });
+    propagados++;
+  }
+  return propagados;
+}
 
 // ---------------- BORRAR (item o mes) ----------------
 const confirmModal = el("confirm-modal");
@@ -610,7 +655,7 @@ async function generarInforme() {
 function renderInforme(netos, pagos) {
   const cont = el("report-content");
   if (netos.length === 0) {
-    cont.innerHTML = `<div class="report-card"><p>No hay deudas pendientes entre las tres partes para ${monthIdToLabel(currentMonthId)}. ¡Todo saldado! 🎉</p></div>`;
+    cont.innerHTML = `<div class="report-card"><p>No hay deudas pendientes para ${monthIdToLabel(currentMonthId)}. ¡Todo saldado! 🎉</p></div>`;
     return;
   }
   cont.innerHTML = `<div class="report-card" id="report-list"></div>`;
@@ -659,7 +704,7 @@ async function descargarInformePDF() {
   pdf.setFontSize(11);
   let y = 34;
   if (ultimoInforme.netos.length === 0) {
-    pdf.text("No hay deudas pendientes entre las tres partes. ¡Todo saldado!", 14, y);
+    pdf.text("No hay deudas pendientes. ¡Todo saldado!", 14, y);
   } else {
     for (const n of ultimoInforme.netos) {
       const key = `${n.de}->${n.a}`;

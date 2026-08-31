@@ -18,7 +18,10 @@
 // un monto redondeado "a ojo"), se puede activar el modo manual y
 // cargar los montos exactos a mano.
 
-export const PERSONAS = ["Diego", "Jessi", "Bachi"];
+// "Papá" es una cuarta persona que puede figurar en gastos (como quien pagó
+// o como participante) pero no tiene cuenta propia: no aparece en el login,
+// y siempre es Diego, Jessi o Bachi quien carga sus gastos por él.
+export const PERSONAS = ["Diego", "Jessi", "Bachi", "Papá"];
 
 export function montoCuota(montoTotal, cuotasTotal) {
   if (!cuotasTotal || cuotasTotal <= 0) return 0;
@@ -61,11 +64,12 @@ export function sumarDeudas(items) {
 
 /** Dado el mapa sumado de deudas, calcula el neto por cada par de personas. */
 export function calcularNetos(totalDeudas) {
-  const pares = [
-    ["Diego", "Jessi"],
-    ["Diego", "Bachi"],
-    ["Jessi", "Bachi"]
-  ];
+  const pares = [];
+  for (let i = 0; i < PERSONAS.length; i++) {
+    for (let j = i + 1; j < PERSONAS.length; j++) {
+      pares.push([PERSONAS[i], PERSONAS[j]]);
+    }
+  }
   const resultado = [];
   for (const [a, b] of pares) {
     const aDebeAB = totalDeudas[`${a}->${b}`] || 0;

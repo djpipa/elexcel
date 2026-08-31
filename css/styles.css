@@ -13,6 +13,7 @@
   --diego: #2f7dc9;
   --jessi: #e8734a;
   --bachi: #c98a2c;
+  --papa: #7c6bb0;
   --radius: 14px;
   --shadow: 0 2px 14px rgba(11, 66, 58, 0.09);
 }
@@ -243,6 +244,7 @@ td.wrap { white-space: normal; }
 .badge-Diego { background: var(--diego); }
 .badge-Jessi { background: var(--jessi); }
 .badge-Bachi { background: var(--bachi); }
+.badge-Papá { background: var(--papa); }
 
 .debt-line { display: block; font-size: 12.5px; margin: 2px 0; }
 
@@ -280,7 +282,7 @@ td.wrap { white-space: normal; }
 .form-row label { flex: 1; }
 fieldset { border: 1.5px solid var(--border); border-radius: 10px; padding: 12px; }
 legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
-.checkbox-row { display: flex; gap: 16px; margin-top: 6px; }
+.checkbox-row { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 6px; }
 .checkbox-row label { flex-direction: row; align-items: center; gap: 6px; font-weight: 500; }
 .modo-toggle { flex-direction: row !important; align-items: center; gap: 8px !important; }
 .preview-box {
@@ -289,7 +291,7 @@ legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
   padding: 10px 12px;
   font-size: 13px;
 }
-.manual-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 500; }
+.manual-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 500; }
 .manual-row input { width: 110px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
 
@@ -303,8 +305,10 @@ legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
 }
 .report-total {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
   font-size: 15px;
@@ -341,6 +345,8 @@ legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
   font-size: 13.5px;
   z-index: 100;
   box-shadow: var(--shadow);
+  max-width: calc(100vw - 32px);
+  text-align: center;
 }
 
 /* ---------- FOOTER ---------- */
@@ -359,4 +365,15 @@ legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
 @media (max-width: 640px) {
   .topbar, .month-bar, .tabs, main { padding-left: 14px; padding-right: 14px; }
   .form-row { flex-direction: column; }
+  .modal { padding: 20px 18px; }
+  .report-total { font-size: 14px; }
+}
+
+@media (max-width: 420px) {
+  .login-card { padding: 28px 18px; }
+  .user-grid { gap: 8px; }
+  .user-btn { padding: 14px 4px; font-size: 13px; }
+  .avatar { width: 38px; height: 38px; font-size: 16px; }
+  .topbar { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .topbar-user { align-self: flex-end; }
 }

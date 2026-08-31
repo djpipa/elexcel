@@ -162,10 +162,9 @@ export async function obtenerInforme(monthId) {
 
 export async function marcarPagoLiquidado(monthId, parKey, liquidado, usuario) {
   const ref = doc(dbase, "months", monthId, "meta", "pagos");
-  const snap = await getDoc(ref);
-  const actual = snap.exists() ? snap.data() : {};
-  actual[parKey] = { liquidado, por: usuario, en: Timestamp.now() };
-  await setDoc(ref, actual);
+  // merge:true evita pisar los pagos que haya marcado otra persona al mismo
+  // tiempo (antes se leía el documento entero y se reescribía completo).
+  await setDoc(ref, { [parKey]: { liquidado, por: usuario, en: Timestamp.now() } }, { merge: true });
 }
 
 export async function obtenerPagos(monthId) {
